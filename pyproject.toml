@@ -1,0 +1,29 @@
+[project]
+name = "alphastream-kf"
+version = "0"
+description = "Dynamic Statistical Arbitrage framework using Kalman Filters for adaptive cointegration."
+authors = [
+    {name = "Francesco D'Angolo",email = "dangolofrancesco@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+dependencies = [
+    "pykalman (>=0.11.2,<0.12.0)",
+    "yfinance (>=1.2.0,<2.0.0)"
+]
+
+[dependency-groups]
+dev = [
+    "pandas (>=3.0.1,<4.0.0)",
+    "numpy (>=2.4.3,<3.0.0)",
+    "statsmodels (>=0.14.6,<0.15.0)",
+    "yfinance (>=1.2.0,<2.0.0)",
+    "matplotlib (>=3.10.8,<4.0.0)",
+    "ipykernel (>=7.2.0,<8.0.0)",
+    "notebook (>=7.5.5,<8.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
