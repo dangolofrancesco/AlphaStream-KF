@@ -21,7 +21,8 @@ class DataLoader:
         print(f"Fetching data for {self.tickers} from {self.start_date} to {self.end_date} ... ")
 
         # Download adjusted close prices for the specified tickers
-        df = yf.download(self.tickers, start=self.start_date, end=self.end_date)['Adj Close']
+        # Note: yfinance >= 0.2.18 returns adjusted prices under 'Close' (not 'Adj Close')
+        df = yf.download(self.tickers, start=self.start_date, end=self.end_date)['Close']
         self.raw_data = df
         print("Data fetching complete.")
         return df
