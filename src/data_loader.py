@@ -21,7 +21,8 @@ class DataLoader:
         print(f"Fetching data for {self.tickers} from {self.start_date} to {self.end_date} ... ")
 
         # Download adjusted close prices for the specified tickers
-        df = yf.download(self.tickers, start=self.start_date, end=self.end_date)['Adj Close']
+        # In this version of yfinance (>=0.2.18) 'Close' contains the adjusted prices 
+        df = yf.download(self.tickers, start=self.start_date, end=self.end_date)['Close']
         self.raw_data = df
         print("Data fetching complete.")
         return df
@@ -53,7 +54,7 @@ class DataLoader:
 
         return y_prices, x_prices, dates
 
-def get_log_returns(self, prices: np.ndarray) -> np.ndarray:
+    def get_log_returns(self, prices: np.ndarray) -> np.ndarray:
         """
         Calculate log returns from risk management metrics
         Formula: r_t = ln(Pt / Pt-1)

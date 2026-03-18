@@ -43,10 +43,10 @@ class DataStorage:
 if __name__ == "__main__":
     print("Testing DataStorage module...")
     # Create a sample DataFrame
-    sample_data = {
+    sample_data = pd.DataFrame({
         'KO': [50.0, 51.0, 52.0],
         'PEP': [150.0, 151.0, 152.0],
-    }, index=pd.date_range(start='2024-01-01', periods=3)
+    }, index=pd.date_range(start='2024-01-01', periods=3))
 
     storage = DataStorage(data_dir='../data')
     storage.save_to_parquet(sample_data, filename='test_data')
