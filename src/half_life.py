@@ -55,10 +55,10 @@ class StationarityAnalyzer:
         if len(spread_clean) < min_samples:
             raise ValueError(f"Not enough data points to calculate half-life. Required: {min_samples}, Available: {len(spread_clean)}")
         
-        # 1. S_{t-1} (lagged spread)
+        # S_{t-1} (lagged spread)
         lagged_spread = spread_clean.shift(1).dropna()
 
-        # 2. dS(t) (delta spread)
+        # dS(t) (delta spread)
         delta_spread = spread_clean.diff().dropna()
 
         # Align the series for regression
@@ -86,9 +86,11 @@ class StationarityAnalyzer:
     
 # --- MODULAR TESTING ---
 if __name__ == "__main__":
-    print("=== Testing StationarityAnalyzer ===")
+    print("=== Stationarity Test ===")
     
     # Generate a synthetic mean-reverting spread: S_t = 0.85 * S_{t-1} + noise
+    # For semplicity I use a synthetic spread with no dirft (mu = 0), so a spread 
+    # that oscillates around zero. I set lamda = 0.85 < 1 to ensure mean reversion (stationarity).
     np.random.seed(42)
     n = 500
     synthetic_spread = np.zeros(n)

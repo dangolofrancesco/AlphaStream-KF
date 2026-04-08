@@ -8,6 +8,7 @@ class DataLoader:
     Handles data ingestion, cleaning, and alignment for Statical Arbitrage strategies.
     Prepares memory-contiguos arrays suitable for high-performance computations in C++.
     """
+    
     def __init__(self, tickers: List[str], start_date: str, end_date: str):
         self.tickers = tickers
         self.start_date = start_date
