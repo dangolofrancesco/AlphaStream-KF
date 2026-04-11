@@ -8,20 +8,29 @@ class KalmanFilterPairs:
     Designed for fast execution using NumPy contiguous arrays. 
     """
 
-    def __init__(self, observation_variance: float = 1e-3, process_variance: float = 1e-5):
+    def __init__(
+            self, 
+            observation_variance: float = 1.0, 
+            process_variance: float = 1e-3):
         """
         Initializes the covariance matrices.
 
         Args:
-            observation_variance (R): Expected noise in the daily price, market noise.
-            process_variance (Q): Expected daily variability in the true hedge ratio (Beta).
+            observation_variance (R): Noise in the daily price observation. Set to 1.0,
+                                      prices are noisy and the filter should not over-trust
+                                      a single day's reading.
+            process_variance (Q):     Daily variability of the true hedge ratio. Set to 1e-3
+                                      so that Q/R = 0.001, meaning beta adapts slowly and
+                                      smoothly rather than chasing every daily fluctuation.
+                                      This matches the delta=1e-3 convention used in the
+                                      pykalman literature for pairs trading.
         """
         self.R = observation_variance  
-        self.state_dim = 2 # (Beta, Intercept (alpha))
+        self.state_dim = 2 # state = [beta, alpha]
         self.Q = np.eye(self.state_dim) * process_variance
 
 
-    def filter(self, y_prices: np.ndarray, x_prices: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def filter(self, y_prices: np.ndarray, x_prices: np.ndarray, beta_init=None) -> Tuple[np.ndarray, np.ndarray]:
         """
         Applies the recursive Predict-Update loop of the Kalman Filter
         
@@ -44,9 +53,12 @@ class KalmanFilterPairs:
         spread = np.zeros(T)
 
         # 1. Initialization (t=0)
-        # Start with Beta=0, Alpha=0, and very high uncertainty P because we have no prior information
-        theta = np.zeros((self.state_dim, 1))  
-        P = np.eye(self.state_dim) * 1.0
+        if beta_init is not None:
+            theta = np.array([[beta_init], [0.0]])  # [beta_OLS, alpha=0]
+            P = np.eye(self.state_dim) * 1.0        # moderate uncertainty with warm-start
+        else:
+            theta = np.zeros((self.state_dim, 1))
+            P = np.eye(self.state_dim) * 10.0       # high uncertainty → fast initial convergence
 
         I = np.eye(self.state_dim)
 

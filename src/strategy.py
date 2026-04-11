@@ -18,6 +18,18 @@ class StatArbStrategy:
         self.entry_z = entry_z
         self.exit_z = exit_z
 
+    def _get_size_multiplier(self, abs_z: float) -> float:
+        """
+        Determines the position size multiplier based on the absolute Z-score.
+        This allows for a more aggressive position when the spread is further from the mean, and a
+        more conservative position when it's closer.
+        """
+        if abs_z < 1.0:   return 0.0
+        elif abs_z < 1.5: return 0.5
+        elif abs_z < 2.0: return 0.75
+        elif abs_z < 2.5: return 0.9
+        else:             return 1.0
+
     def generate_signals(self, spread_array: np.ndarray, half_life: int) -> pd.DataFrame:
         """
         Calculates the Z-Score and generates the target position for each time step.
@@ -78,7 +90,8 @@ class StatArbStrategy:
                 if z <= self.exit_z:
                     current_position = 0  # exit short position when spread reverts to mean or goes below it
 
-            position[t] = current_position
+            multiplier = self._get_size_multiplier(abs(z))
+            position[t] = current_position * multiplier
 
         # 4. Compile results into a DataFrame
         results = pd.DataFrame({
