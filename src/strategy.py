@@ -24,11 +24,11 @@ class StatArbStrategy:
         This allows for a more aggressive position when the spread is further from the mean, and a
         more conservative position when it's closer.
         """
-        if abs_z < 1.0:   return 0.0
-        elif abs_z < 1.5: return 0.5
-        elif abs_z < 2.0: return 0.75
-        elif abs_z < 2.5: return 0.9
-        else:             return 1.0
+        if abs_z <= 1.0:   return 0.0
+        elif abs_z < 1.5:  return 0.5
+        elif abs_z < 2.0:  return 0.75
+        elif abs_z < 2.5:  return 0.9
+        else:              return 1.0
 
     def generate_signals(self, spread_array: np.ndarray, half_life: int) -> pd.DataFrame:
         """
@@ -63,7 +63,7 @@ class StatArbStrategy:
         # 3. State Machine for Signal Generation 
         # we use a fast iterative loop 
         n = len(z_score)
-        position = np.zeros(n, dtype=int)  # pre-allocate position array
+        position = np.zeros(n, dtype=float)  # pre-allocate position array
         current_position = 0  # 0 = flat, 1 = long spread, -1 = short spread
 
         for t in range(n):
@@ -83,7 +83,7 @@ class StatArbStrategy:
 
             # Exit Conditions
             elif current_position == 1:
-                if z >= self.exit_z:
+                if z >= -self.exit_z:
                     current_position = 0  # exit long position when spread reverts to mean or goes above it
                 
             elif current_position == -1:

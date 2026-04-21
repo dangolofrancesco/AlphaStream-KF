@@ -150,13 +150,18 @@ class Backtester:
                 if exec_target != 0:
                     trade_entry_equity = current_equity
 
-                    # We want to allocate about 50% of the entire capital 
-                    alloc_y = 0.5 * current_equity
+                    # We extract the direction (+1/-1) and the multiplier/strength (0.5, 0.75, etc.)
+                    direction = np.sign(exec_target)
+                    strength = abs(exec_target)
 
-                    if exec_target == 1:  # Long Spread: Long Y, Short X
+                    # We want to allocate our capital based on the stregth of the signal
+                    # Max 49% of the capital if strength = 1.0
+                    alloc_y = (0.49 * current_equity) * strength  # Scale allocation by signal strength (0 to 1)
+
+                    if direction == 1:  # Long Spread: Long Y, Short X
                         shares_y = alloc_y / y_prices[t]
                         shares_x = -(betas[t] * shares_y)  # Short X according to the hedge ratio to market neutrality 
-                    elif exec_target == -1:  # Short Spread: Short Y, Long X
+                    elif direction == -1:  # Short Spread: Short Y, Long X
                         shares_y = -(alloc_y / y_prices[t])
                         shares_x = -(betas[t] * shares_y)  # Long X according to the hedge ratio to market neutrality
 

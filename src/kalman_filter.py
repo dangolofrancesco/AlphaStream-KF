@@ -8,10 +8,10 @@ class KalmanFilterPairs:
     Designed for fast execution using NumPy contiguous arrays. 
     """
 
-    def __init__(
-            self, 
-            observation_variance: float = 1.0, 
-            process_variance: float = 1e-3):
+    def __init__(self, 
+                 observation_variance: float = 1e-3, 
+                 delta_beta: float = 1e-5,    # Slow mean reversion for Beta
+                 delta_alpha: float = 1e-3):  # Fast adaptation for Intercept (Drift)
         """
         Initializes the covariance matrices.
 
@@ -27,7 +27,10 @@ class KalmanFilterPairs:
         """
         self.R = observation_variance  
         self.state_dim = 2 # state = [beta, alpha]
-        self.Q = np.eye(self.state_dim) * process_variance
+
+        # Q matrix: Process noise covariance.
+        # Diagonal matrix allowing different adaptation speeds for Beta and Alpha.
+        self.Q = np.diag([delta_beta, delta_alpha])
 
 
     def filter(self, y_prices: np.ndarray, x_prices: np.ndarray, beta_init=None) -> Tuple[np.ndarray, np.ndarray]:
@@ -41,7 +44,7 @@ class KalmanFilterPairs:
         Returns:
             Tupe containing:
                 - state_means: 2D array of shape (T, 2) with [beta_t, alpha_t] estimates at each time step.
-                - spread: 1D array of shape (T,) containing the innovation (spread) at each time step.
+                - spread: 1D array [...] containing the structural spread (true residual)
         """
 
         y = np.asarray(y_prices).flatten()
@@ -51,6 +54,7 @@ class KalmanFilterPairs:
         # First, pre-allocate memory for outputs for better performance
         state_means = np.zeros((T, self.state_dim))  
         spread = np.zeros(T)
+        
 
         # 1. Initialization (t=0)
         if beta_init is not None:
@@ -80,16 +84,21 @@ class KalmanFilterPairs:
             # Kalman Gain
             # F_t = H_t @ P_pred @ H_t.T + R
             # K = P_pred @ H_t.T / F_t
-            F_t = np.dot(np.dot(H_t, P_pred), H_t.T) + self.R  
-            K = np.dot(P_pred, H_t.T) / F_t 
+            F_t = np.dot(np.dot(H_t, P_pred), H_t.T)[0, 0] + self.R  
+            K = np.dot(P_pred, H_t.T) / F_t
 
             # Update estimates
             theta = theta_pred + (K * e_t)
             P = np.dot(I - np.dot(K, H_t), P_pred)
 
+            # Compute the spread (residual) using the updated theta
+            # theta[0, 0] is beta, theta[1, 0] is alpha
+            y_hat = (theta[0, 0] * x[t]) + theta[1, 0]
+            true_spread = y[t] - y_hat
+
             # Store results
             state_means[t, :] = theta.flatten()  
-            spread[t] = e_t
+            spread[t] = true_spread
 
         return state_means, spread
 
