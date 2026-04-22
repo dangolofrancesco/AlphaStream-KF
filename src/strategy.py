@@ -4,7 +4,7 @@ import pandas as pd
 class StatArbStrategy:
     """
     Transaltes the dynamic spread from Kalman Filter into actionable trading signals for pairs trading
-    using a Z-score approach with a rolling window defined by the half-life of the spread.
+    using the filter Z-score z_t = e_t / sqrt(S_t).
     """
 
     def __init__(self, entry_z: float = 2.0, exit_z: float = 0.0):
@@ -30,13 +30,13 @@ class StatArbStrategy:
         elif abs_z < 2.5:  return 0.9
         else:              return 1.0
 
-    def generate_signals(self, spread_array: np.ndarray, half_life: int) -> pd.DataFrame:
+    def generate_signals(self, innovations: np.ndarray, innovation_var: np.ndarray) -> pd.DataFrame:
         """
         Calculates the Z-Score and generates the target position for each time step.
         
         Args:
-            spread_array: 1D numpy array containing the spread from the Kalman Filter 
-            half_life: the calculated half-life from the training period 
+            innovations: 1D numpy array containing the KF innovation e_t.
+            innovation_var: 1D numpy array containing innovation variance S_t.
 
         Returns:
             A pandas DataFrame with columns:
@@ -45,57 +45,51 @@ class StatArbStrategy:
                 - 'position': the target position (1 for long, -1 for short, 0 for no position)
         """
 
-        # 1. Detemine the rolling window size 
-        # Ensure that it's at least an integer and has a minimum size (e.g., 5) to calculate std dev
-        window = max(int(round(half_life)), 5)
+        # Z-score of the filter 
+        z_score = pd.Series(innovations / np.sqrt(innovation_var))
 
-        # convert array to pandas Series for rolling calculations
-        spread_series = pd.Series(spread_array)
-
-        # 2. Calculate Dynamic Z-Score 
-        rolling_mean = spread_series.rolling(window=window).mean()
-        rolling_std = spread_series.rolling(window=window).std()
-
-        # add a tiny epsilon to avoid division by zero in case of zero std dev
-        epsilon = 1e-8
-        z_score = (spread_series - rolling_mean) / (rolling_std + epsilon)
-
-        # 3. State Machine for Signal Generation 
-        # we use a fast iterative loop 
         n = len(z_score)
         position = np.zeros(n, dtype=float)  # pre-allocate position array
         current_position = 0  # 0 = flat, 1 = long spread, -1 = short spread
+        entry_multiplier = 0.0  # This will be adjusted based on the Z-score distance
+        hard_stop_z = 3.5  # Structural-break hard stop threshold
 
         for t in range(n):
             z = z_score.iloc[t]
 
-            # If Z-Score is NaN (which can happen in the first few rows due to rolling calculations), we stay flat
+            # If Z-Score is NaN, we stay flat.
             if pd.isna(z):
                 position[t] = 0
                 continue
 
             # Entry Conditions
             if current_position == 0:
-                if z >= self.entry_z:
+                if z >= self.entry_z and z < hard_stop_z:
                     current_position = -1  # spread is too high ->  short the spread
-                elif z <= -self.entry_z:
+                    entry_multiplier = self._get_size_multiplier(abs(z))
+                elif z <= -self.entry_z and z > -hard_stop_z:
                     current_position = 1   # spread is too low -> long the spread
+                    entry_multiplier = self._get_size_multiplier(abs(z))
 
-            # Exit Conditions
+            # Exit & Hard Stop Conditions
             elif current_position == 1:
-                if z >= -self.exit_z:
-                    current_position = 0  # exit long position when spread reverts to mean or goes above it
-                
+                # Stop out on structural break or exit on mean reversion.
+                if z <= -hard_stop_z or z >= -self.exit_z:
+                    current_position = 0
+                    entry_multiplier = 0.0
             elif current_position == -1:
-                if z <= self.exit_z:
-                    current_position = 0  # exit short position when spread reverts to mean or goes below it
+                # Stop out on structural break or exit on mean reversion.
+                if z >= hard_stop_z or z <= self.exit_z:
+                    current_position = 0
+                    entry_multiplier = 0.0
 
-            multiplier = self._get_size_multiplier(abs(z))
-            position[t] = current_position * multiplier
+            # Multiplier FIXED on entry 
+            position[t] = current_position * entry_multiplier
 
         # 4. Compile results into a DataFrame
         results = pd.DataFrame({
-            'Spread': spread_series,
+            'Innovation': pd.Series(innovations),
+            'Innovation_Var': pd.Series(innovation_var),
             'Z_Score': z_score,
             'Target_Position': position
         })
@@ -112,12 +106,10 @@ if __name__ == "__main__":
     # A sine wave simulating mean reversion, plus some noise
     synthetic_spread = np.sin(t) * 2.5 + np.random.normal(0, 0.2, 500)
     
-    # Let's assume our train phase gave us a half-life of 20 periods
-    assumed_half_life = 20.0 
-    
     # 2. Initialize and run strategy
     strategy = StatArbStrategy(entry_z=2.0, exit_z=0.0)
-    signals_df = strategy.generate_signals(synthetic_spread, assumed_half_life)
+    synthetic_var = np.ones_like(synthetic_spread)
+    signals_df = strategy.generate_signals(synthetic_spread, synthetic_var)
     
     # 3. Analyze Results
     long_days = (signals_df['Target_Position'] == 1).sum()
