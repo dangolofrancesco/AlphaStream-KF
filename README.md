@@ -2,7 +2,7 @@
 
 In this repository, we delve into the application of institutional-grade statistical arbitrage (StatArb) within the dynamic and highly efficient landscape of large-cap US Equities. Acknowledging the distinct challenges that modern markets present—such as rapid regime shifts, changing interest rate cycles, and spurious cointegration. This investigation employs a robust dataset focused on tightly coupled intra-sector assets (e.g., Mega-cap Tech, Energy Supermajors, Systemic Banks). The code elucidates how an adaptive, mathematically rigorous statistical arbitrage engine can navigate market inefficiencies while strictly managing risk and execution costs.
 
-## Methodology
+## Methodology
 The methodology is comprehensive, moving beyond naive mean-reversion models to implement a "Pure Kalman" adaptive framework. It emphasizes economic pre-filtering, rigorous cointegration testing, and advanced tools like the Kalman Filter with decoupled process variances to identify stable relationships between assets. The approach is further refined by a filter-theoretic z-score, disjoint portfolio selection to ensure true market neutrality, and fractional position sizing locked at entry. This repo bridges theoretical econometrics with practical hedge-fund execution tactics, rendering it a crucial tool for quantitative research in fast-evolving financial markets.
 
 ## Data Split
